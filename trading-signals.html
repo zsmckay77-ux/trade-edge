@@ -1,0 +1,1449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TradeEdge — AI Chart Analysis</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:       #080b10;
+      --surface:  #0d1117;
+      --card:     #111820;
+      --border:   #1e2d3d;
+      --accent:   #00d4ff;
+      --accent2:  #ff6b35;
+      --gold:     #f5a623;
+      --green:    #00e5a0;
+      --text:     #c9d1d9;
+      --muted:    #4a5568;
+      --white:    #f0f6fc;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      min-height: 100vh;
+      background-image:
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(0,212,255,0.08) 0%, transparent 60%),
+        radial-gradient(ellipse 40% 30% at 90% 10%, rgba(255,107,53,0.05) 0%, transparent 50%);
+    }
+
+    /* ── HEADER ── */
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 18px 32px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: rgba(13,17,23,0.8);
+      backdrop-filter: blur(10px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .logo-mark {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Space Mono', monospace;
+      font-size: 13px;
+      font-weight: 700;
+      color: #000;
+      flex-shrink: 0;
+    }
+
+    .logo-text {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--white);
+      letter-spacing: -0.02em;
+    }
+
+    .logo-text span { color: var(--accent); }
+
+    .header-tag {
+      margin-left: auto;
+      background: rgba(0,212,255,0.08);
+      border: 1px solid rgba(0,212,255,0.2);
+      color: var(--accent);
+      font-size: 11px;
+      font-family: 'Space Mono', monospace;
+      padding: 4px 10px;
+      border-radius: 20px;
+    }
+
+    /* ── MAIN LAYOUT ── */
+    main {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 40px 24px 80px;
+    }
+
+    .page-title {
+      font-size: 36px;
+      font-weight: 800;
+      color: var(--white);
+      line-height: 1.1;
+      margin-bottom: 8px;
+      letter-spacing: -0.03em;
+    }
+
+    .page-title span {
+      background: linear-gradient(90deg, var(--accent), var(--green));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .page-sub {
+      color: var(--muted);
+      font-size: 15px;
+      margin-bottom: 36px;
+    }
+
+    /* ── ANALYSIS TYPE SELECTOR ── */
+    .section-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+
+    .prompt-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 10px;
+      margin-bottom: 32px;
+    }
+
+    .prompt-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .prompt-card:hover {
+      border-color: var(--accent);
+      background: rgba(0,212,255,0.04);
+    }
+
+    .prompt-card.selected {
+      border-color: var(--accent);
+      background: rgba(0,212,255,0.08);
+      box-shadow: 0 0 0 1px var(--accent) inset;
+    }
+
+    .prompt-icon {
+      font-size: 22px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .prompt-info h4 {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--white);
+      margin-bottom: 3px;
+    }
+
+    .prompt-info p {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    .prompt-card.selected .prompt-info h4 { color: var(--accent); }
+
+    /* ── UPLOAD ZONE ── */
+    .upload-zone {
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      padding: 40px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin-bottom: 20px;
+      position: relative;
+      background: var(--card);
+    }
+
+    .upload-zone:hover, .upload-zone.drag-over {
+      border-color: var(--accent);
+      background: rgba(0,212,255,0.04);
+    }
+
+    .upload-zone.has-image {
+      border-style: solid;
+      border-color: var(--green);
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .upload-zone input[type=file] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+    }
+
+    .upload-icon { font-size: 36px; margin-bottom: 10px; }
+
+    .upload-zone h3 {
+      color: var(--white);
+      font-size: 16px;
+      margin-bottom: 6px;
+    }
+
+    .upload-zone p {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    #preview-img {
+      width: 100%;
+      max-height: 400px;
+      object-fit: contain;
+      display: none;
+      border-radius: 10px;
+    }
+
+    .change-img-btn {
+      position: absolute;
+      top: 12px; right: 12px;
+      background: rgba(0,0,0,0.7);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 5px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      z-index: 2;
+      display: none;
+    }
+
+    /* ── EXTRA CONTEXT ── */
+    .context-area {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      width: 100%;
+      padding: 12px 16px;
+      color: var(--text);
+      font-size: 14px;
+      font-family: 'Syne', sans-serif;
+      resize: vertical;
+      min-height: 72px;
+      margin-bottom: 20px;
+      transition: border-color 0.15s;
+    }
+
+    .context-area:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .context-area::placeholder { color: var(--muted); }
+
+    /* ── ANALYSE BUTTON ── */
+    .analyse-btn {
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, var(--accent), #0099cc);
+      color: #000;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 700;
+      font-family: 'Syne', sans-serif;
+      cursor: pointer;
+      letter-spacing: 0.02em;
+      transition: all 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .analyse-btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 24px rgba(0,212,255,0.3);
+    }
+
+    .analyse-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* ── RESULT PANEL ── */
+    .result-panel {
+      margin-top: 36px;
+      display: none;
+    }
+
+    .result-panel.visible { display: block; }
+
+    .result-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .result-type-badge {
+      background: rgba(0,212,255,0.1);
+      border: 1px solid rgba(0,212,255,0.3);
+      color: var(--accent);
+      font-size: 11px;
+      font-family: 'Space Mono', monospace;
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+
+    .result-time {
+      margin-left: auto;
+      font-size: 12px;
+      color: var(--muted);
+      font-family: 'Space Mono', monospace;
+    }
+
+    .result-content {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px;
+      line-height: 1.8;
+      font-size: 15px;
+    }
+
+    /* Format the AI response nicely */
+    .result-content h2 {
+      color: var(--accent);
+      font-size: 14px;
+      font-family: 'Space Mono', monospace;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin: 28px 0 12px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .result-content h2:first-child { margin-top: 0; }
+
+    .result-content h3 {
+      color: var(--white);
+      font-size: 14px;
+      margin: 16px 0 6px;
+    }
+
+    .result-content ul, .result-content ol {
+      padding-left: 20px;
+      margin: 8px 0;
+    }
+
+    .result-content li {
+      margin-bottom: 6px;
+      color: var(--text);
+    }
+
+    .result-content strong { color: var(--white); }
+
+    .result-content p { margin-bottom: 10px; }
+
+    /* Highlight key numbers */
+    .result-content em {
+      color: var(--gold);
+      font-style: normal;
+      font-family: 'Space Mono', monospace;
+      font-size: 13px;
+    }
+
+    /* Loading dots */
+    .loading-wrap {
+      display: none;
+      text-align: center;
+      padding: 48px;
+    }
+
+    .loading-wrap.visible { display: block; }
+
+    .loading-label {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 16px;
+      font-family: 'Space Mono', monospace;
+    }
+
+    .dots span {
+      display: inline-block;
+      width: 8px; height: 8px;
+      background: var(--accent);
+      border-radius: 50%;
+      margin: 0 4px;
+      animation: bounce 1.2s infinite;
+    }
+
+    .dots span:nth-child(2) { animation-delay: 0.2s; }
+    .dots span:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes bounce {
+      0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+      40%            { transform: translateY(-10px); opacity: 1; }
+    }
+
+    /* ── HISTORY ── */
+    .history-section {
+      margin-top: 48px;
+      padding-top: 32px;
+      border-top: 1px solid var(--border);
+    }
+
+    .history-item {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+
+    .history-item:hover { border-color: var(--accent); }
+
+    .history-item-icon { font-size: 20px; }
+
+    .history-item-info h4 {
+      font-size: 14px;
+      color: var(--white);
+      margin-bottom: 2px;
+    }
+
+    .history-item-info p {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .history-item-time {
+      margin-left: auto;
+      font-size: 11px;
+      color: var(--muted);
+      font-family: 'Space Mono', monospace;
+    }
+
+    .error-box {
+      background: rgba(255,75,75,0.08);
+      border: 1px solid rgba(255,75,75,0.3);
+      color: #ff6b6b;
+      padding: 14px 18px;
+      border-radius: 8px;
+      font-size: 14px;
+      margin-top: 16px;
+      display: none;
+    }
+
+    .error-box.visible { display: block; }
+
+    @media (max-width: 600px) {
+      header { padding: 14px 16px; }
+      main   { padding: 24px 16px 60px; }
+      .page-title { font-size: 26px; }
+      .prompt-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ── INSTRUCTIONS ── */
+    .instructions-section {
+      margin-top: 56px;
+      padding-top: 48px;
+      border-top: 1px solid var(--border);
+    }
+
+    .instructions-title {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--white);
+      letter-spacing: -0.02em;
+      margin-bottom: 6px;
+    }
+
+    .instructions-title span { color: var(--accent); }
+
+    .instructions-sub {
+      color: var(--muted);
+      font-size: 14px;
+      margin-bottom: 32px;
+    }
+
+    .instr-group {
+      margin-bottom: 36px;
+    }
+
+    .instr-group-title {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .instr-group-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .instr-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .instr-step {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px 18px;
+      transition: border-color 0.15s;
+    }
+
+    .instr-step:hover { border-color: var(--border); }
+
+    .step-num {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: rgba(0,212,255,0.1);
+      border: 1px solid rgba(0,212,255,0.3);
+      color: var(--accent);
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .step-body h4 {
+      color: var(--white);
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .step-body p {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .step-body p strong { color: var(--text); }
+
+    .step-tip {
+      display: inline-block;
+      margin-top: 6px;
+      background: rgba(245,166,35,0.08);
+      border: 1px solid rgba(245,166,35,0.2);
+      color: var(--gold);
+      font-size: 12px;
+      padding: 3px 10px;
+      border-radius: 4px;
+    }
+
+    .analysis-types-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    .type-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+
+    .type-card-icon { font-size: 18px; flex-shrink: 0; }
+
+    .type-card-body h5 {
+      color: var(--white);
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 3px;
+    }
+
+    .type-card-body p {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .do-dont {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    .do-box, .dont-box {
+      border-radius: 8px;
+      padding: 14px 16px;
+    }
+
+    .do-box {
+      background: rgba(0,229,160,0.05);
+      border: 1px solid rgba(0,229,160,0.2);
+    }
+
+    .dont-box {
+      background: rgba(255,75,75,0.05);
+      border: 1px solid rgba(255,75,75,0.2);
+    }
+
+    .do-box h5 { color: var(--green); font-size: 12px; margin-bottom: 8px; font-family: 'Space Mono', monospace; }
+    .dont-box h5 { color: #ff6b6b; font-size: 12px; margin-bottom: 8px; font-family: 'Space Mono', monospace; }
+
+    .do-box li, .dont-box li {
+      font-size: 12px;
+      color: var(--text);
+      margin-bottom: 5px;
+      list-style: none;
+      padding-left: 0;
+      line-height: 1.4;
+    }
+
+    .do-box li::before { content: '✓ '; color: var(--green); }
+    .dont-box li::before { content: '✗ '; color: #ff6b6b; }
+
+    @media (max-width: 600px) {
+      .do-dont { grid-template-columns: 1fr; }
+      .analysis-types-grid { grid-template-columns: 1fr; }
+    }
+
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo-mark">TE</div>
+  <div class="logo-text">Trade<span>Edge</span></div>
+  <div class="header-tag">AI ANALYSIS</div>
+</header>
+
+<main>
+  <h1 class="page-title">Chart <span>Analysis</span><br>Powered by AI</h1>
+  <p class="page-sub">Upload a screenshot of any chart. Pick your analysis type. Get a professional breakdown in seconds.</p>
+
+  <!-- STEP 1: Pick analysis type -->
+  <div class="section-label">Step 1 — Choose analysis type</div>
+  <div class="prompt-grid">
+
+    <div class="prompt-card selected" data-type="trend" onclick="selectPrompt(this)">
+      <div class="prompt-icon">📈</div>
+      <div class="prompt-info">
+        <h4>Trend Analysis</h4>
+        <p>Dominant trend, key support & resistance, market structure breakdown</p>
+      </div>
+    </div>
+
+    <div class="prompt-card" data-type="mtf" onclick="selectPrompt(this)">
+      <div class="prompt-icon">🕰️</div>
+      <div class="prompt-info">
+        <h4>Multi-Timeframe</h4>
+        <p>1H / 4H / Daily alignment, confluence zones, trade timing</p>
+      </div>
+    </div>
+
+    <div class="prompt-card" data-type="patterns" onclick="selectPrompt(this)">
+      <div class="prompt-icon">🔍</div>
+      <div class="prompt-info">
+        <h4>Pattern Scanner</h4>
+        <p>Flags, triangles, head & shoulders, wedges, double tops/bottoms</p>
+      </div>
+    </div>
+
+    <div class="prompt-card" data-type="setup" onclick="selectPrompt(this)">
+      <div class="prompt-icon">🎯</div>
+      <div class="prompt-info">
+        <h4>Trade Setup</h4>
+        <p>Exact entry, stop loss, take profit levels and risk/reward ratio</p>
+      </div>
+    </div>
+
+    <div class="prompt-card" data-type="watchlist" onclick="selectPrompt(this)">
+      <div class="prompt-icon">📋</div>
+      <div class="prompt-info">
+        <h4>Watchlist Scorer</h4>
+        <p>Rate multiple assets 1–5 for setup quality and actionability</p>
+      </div>
+    </div>
+
+    <div class="prompt-card" data-type="review" onclick="selectPrompt(this)">
+      <div class="prompt-icon">📝</div>
+      <div class="prompt-info">
+        <h4>Post-Trade Review</h4>
+        <p>Honest analysis of a trade you already took — entry, exit, process</p>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- STEP 2: Upload chart -->
+  <div class="section-label">Step 2 — Upload your chart screenshot</div>
+  <div class="upload-zone" id="upload-zone" onclick="triggerUpload()">
+    <input type="file" id="file-input" accept="image/*" onchange="handleFile(event)">
+    <button class="change-img-btn" id="change-btn" onclick="clearImage(event)">✕ Remove</button>
+    <img id="preview-img" alt="Chart preview">
+    <div id="upload-placeholder">
+      <div class="upload-icon">📊</div>
+      <h3>Drop your chart here or click to upload</h3>
+      <p>PNG, JPG, WebP supported · TradingView, Binance, MT4, any platform</p>
+    </div>
+  </div>
+
+  <!-- STEP 3: Optional context -->
+  <div class="section-label">Step 3 — Add context (optional but recommended)</div>
+  <textarea class="context-area" id="context-input"
+    placeholder="e.g. BTC/USD daily chart · Been watching a potential double bottom · Volume spiked yesterday · I'm considering a long entry..."></textarea>
+
+  <!-- ANALYSE -->
+  <button class="analyse-btn" id="analyse-btn" onclick="runAnalysis()">
+    ⚡ Analyse Chart
+  </button>
+
+  <div class="error-box" id="error-box"></div>
+
+  <!-- LOADING -->
+  <div class="loading-wrap" id="loading-wrap">
+    <div class="dots">
+      <span></span><span></span><span></span>
+    </div>
+    <div class="loading-label" id="loading-label">Analysing chart...</div>
+  </div>
+
+  <!-- RESULT -->
+  <div class="result-panel" id="result-panel">
+    <div class="result-header">
+      <div style="font-size:18px;font-weight:700;color:var(--white)">Analysis Complete</div>
+      <div class="result-type-badge" id="result-badge">TREND</div>
+      <div class="result-time" id="result-time"></div>
+    </div>
+    <div class="result-content" id="result-content"></div>
+    <div style="margin-top:16px;display:flex;gap:10px">
+      <button onclick="copyResult()" style="background:var(--card);border:1px solid var(--border);color:var(--text);padding:9px 18px;border-radius:6px;font-size:13px;cursor:pointer;font-family:Syne,sans-serif">📋 Copy Analysis</button>
+      <button onclick="clearAll()" style="background:var(--card);border:1px solid var(--border);color:var(--muted);padding:9px 18px;border-radius:6px;font-size:13px;cursor:pointer;font-family:Syne,sans-serif">🔄 New Analysis</button>
+    </div>
+  </div>
+
+  <!-- HISTORY -->
+  <div class="history-section" id="history-section" style="display:none">
+    <div class="section-label">Previous Analyses</div>
+    <div id="history-list"></div>
+  </div>
+
+
+  <!-- ── INSTRUCTIONS SECTION ── -->
+  <div class="instructions-section">
+
+    <h2 class="instructions-title">How to Use <span>TradeEdge</span></h2>
+    <p class="instructions-sub">Follow this guide to get the most accurate and actionable analysis from every chart you upload.</p>
+
+    <!-- GETTING STARTED -->
+    <div class="instr-group">
+      <div class="instr-group-title">Getting Started</div>
+      <div class="instr-steps">
+
+        <div class="instr-step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <h4>Take a chart screenshot</h4>
+            <p>Open your charting platform (TradingView, Binance, MT4, etc.) and take a screenshot of the chart you want analysed. The more of the chart that's visible, the better the analysis — ideally showing at least <strong>3–6 months of price history</strong> with candles clearly visible.</p>
+            <span class="step-tip">💡 On Windows: Win+Shift+S · On Mac: Cmd+Shift+4 · On phone: screenshot button</span>
+          </div>
+        </div>
+
+        <div class="instr-step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <h4>Choose your analysis type</h4>
+            <p>Pick one of the six analysis modes at the top of the page. Each one gives you a different type of breakdown — see the guide below for which to use and when.</p>
+          </div>
+        </div>
+
+        <div class="instr-step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <h4>Upload your chart — three ways to do it</h4>
+            <p><strong>Option A — Drag and drop:</strong> Drag the screenshot file from your computer straight onto the upload box.<br>
+            <strong>Option B — Click to browse:</strong> Click the upload box and find the screenshot in your files.<br>
+            <strong>Option C — Paste:</strong> Copy the screenshot to your clipboard and press <strong>Ctrl+V</strong> (or Cmd+V on Mac) — it pastes straight in. This is the fastest method.</p>
+            <span class="step-tip">💡 Ctrl+V paste works instantly after taking a Win+Shift+S screenshot</span>
+          </div>
+        </div>
+
+        <div class="instr-step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <h4>Add context in the text box (optional but highly recommended)</h4>
+            <p>Tell the AI a few key details it can't see just from the image. For example: <em>"BTC/USD, daily chart, I'm thinking about a long entry at current levels, volume has been rising for 3 days"</em>. The more context you give, the more specific and useful the analysis will be.</p>
+          </div>
+        </div>
+
+        <div class="instr-step">
+          <div class="step-num">5</div>
+          <div class="step-body">
+            <h4>Click Analyse and read your breakdown</h4>
+            <p>The analysis takes around <strong>10–20 seconds</strong>. It will be saved automatically to your history at the bottom of the page so you can refer back to it at any time.</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- WHICH ANALYSIS TO USE -->
+    <div class="instr-group">
+      <div class="instr-group-title">Which Analysis Type to Use</div>
+      <div class="analysis-types-grid">
+
+        <div class="type-card">
+          <div class="type-card-icon">📈</div>
+          <div class="type-card-body">
+            <h5>Trend Analysis</h5>
+            <p>Use this first on any new chart. Gives you the full picture — trend direction, strength, key support and resistance levels, and market structure.</p>
+          </div>
+        </div>
+
+        <div class="type-card">
+          <div class="type-card-icon">🕰️</div>
+          <div class="type-card-body">
+            <h5>Multi-Timeframe</h5>
+            <p>Use when you want to know the best timing to enter. Upload a chart and describe what you see on higher and lower timeframes in the context box.</p>
+          </div>
+        </div>
+
+        <div class="type-card">
+          <div class="type-card-icon">🔍</div>
+          <div class="type-card-body">
+            <h5>Pattern Scanner</h5>
+            <p>Use when you think you can see a pattern forming but aren't sure. It will find and rate every pattern on the chart — flags, triangles, head and shoulders, wedges and more.</p>
+          </div>
+        </div>
+
+        <div class="type-card">
+          <div class="type-card-icon">🎯</div>
+          <div class="type-card-body">
+            <h5>Trade Setup</h5>
+            <p>Use when you are close to placing a trade. Gives you a precise entry price, stop loss, and two take profit targets with exact risk/reward ratios.</p>
+          </div>
+        </div>
+
+        <div class="type-card">
+          <div class="type-card-icon">📋</div>
+          <div class="type-card-body">
+            <h5>Watchlist Scorer</h5>
+            <p>Use when you have several assets and want to know which to focus on. Describe each one in the context box — it scores them 1 to 5 and tells you which to prioritise.</p>
+          </div>
+        </div>
+
+        <div class="type-card">
+          <div class="type-card-icon">📝</div>
+          <div class="type-card-body">
+            <h5>Post-Trade Review</h5>
+            <p>Use after closing a trade — win or loss. Upload the chart and describe what you did in the context box. It will honestly tell you what you did right and wrong and how to improve.</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- CHART QUALITY TIPS -->
+    <div class="instr-group">
+      <div class="instr-group-title">How to Get the Best Analysis</div>
+      <div class="instr-steps">
+
+        <div class="instr-step">
+          <div class="step-num">✓</div>
+          <div class="step-body">
+            <h4>Make sure the chart shows the asset name and timeframe</h4>
+            <p>The AI needs to know what it's looking at. Most charting platforms show the asset name (e.g. BTC/USD) and timeframe (e.g. 1D, 4H) in the top left corner — make sure this is visible in your screenshot. If it isn't, mention it in the context box.</p>
+          </div>
+        </div>
+
+        <div class="instr-step">
+          <div class="step-num">✓</div>
+          <div class="step-body">
+            <h4>Show enough price history</h4>
+            <p>A chart showing only the last few hours gives very little context. Zoom out so at least <strong>3–6 months of candles</strong> are visible. This allows the AI to identify major support and resistance levels, trends, and patterns that short-term charts miss entirely.</p>
+          </div>
+        </div>
+
+        <div class="instr-step">
+          <div class="step-num">✓</div>
+          <div class="step-body">
+            <h4>Include volume bars if possible</h4>
+            <p>Volume tells the AI whether a move is backed by conviction or is a low-quality fake-out. Most charting platforms show volume as bars at the bottom of the chart. Leave these visible in your screenshot for a stronger analysis.</p>
+            <span class="step-tip">💡 On TradingView: right-click chart → Add Indicator → Volume</span>
+          </div>
+        </div>
+
+        <div class="instr-step">
+          <div class="step-num">✓</div>
+          <div class="step-body">
+            <h4>Use the context box for your trade idea</h4>
+            <p>Don't just upload a blank chart. Tell the AI what you're thinking — "I'm considering a long here", "I think this is forming a double bottom", "I want to know if this rally has legs". This makes the analysis directly relevant to your decision rather than generic.</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- DO AND DON'T -->
+    <div class="instr-group">
+      <div class="instr-group-title">Do's and Don'ts</div>
+      <div class="do-dont">
+        <div class="do-box">
+          <h5>✓ DO</h5>
+          <ul>
+            <li>Start with Trend Analysis on every new asset</li>
+            <li>Use Trade Setup only when you are genuinely ready to place a trade</li>
+            <li>Read the full analysis before making any decision</li>
+            <li>Use Post-Trade Review after every loss to learn from it</li>
+            <li>Add context — the more detail the better</li>
+            <li>Check multiple timeframes for important trades</li>
+            <li>Treat the analysis as one input, not a signal to blindly follow</li>
+          </ul>
+        </div>
+        <div class="dont-box">
+          <h5>✗ DON'T</h5>
+          <ul>
+            <li>Upload a chart with only a few candles visible</li>
+            <li>Skip the context box on Trade Setup or Post-Trade Review</li>
+            <li>Treat AI analysis as guaranteed — markets are unpredictable</li>
+            <li>Use this on very low-liquidity or unknown assets</li>
+            <li>Enter a trade purely because the AI says to</li>
+            <li>Ignore the risk/reward ratios given in Trade Setup</li>
+            <li>Risk more than you can afford to lose on any single trade</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- RECOMMENDED WORKFLOW -->
+    <div class="instr-group">
+      <div class="instr-group-title">Recommended Workflow for a Trade</div>
+      <div class="instr-steps">
+
+        <div class="instr-step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <h4>Start with Trend Analysis on the daily chart</h4>
+            <p>Get the big picture first. Is the asset in an uptrend, downtrend, or choppy range? This tells you which direction to be biased towards. Never fight the dominant trend on the daily.</p>
+          </div>
+        </div>
+
+        <div class="instr-step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <h4>Run Pattern Scanner to spot any forming setups</h4>
+            <p>Upload the same chart and switch to Pattern Scanner. This will tell you if there is a recognisable pattern forming — flags, triangles, double bottoms etc — and what the expected move would be if it completes.</p>
+          </div>
+        </div>
+
+        <div class="instr-step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <h4>Drop to a lower timeframe and run Multi-Timeframe</h4>
+            <p>Upload a 1H or 4H chart and ask for Multi-Timeframe analysis. This helps you find the right moment to enter — even if the daily trend is bullish, the 1H might be in a pullback, meaning you wait for the dip before buying.</p>
+          </div>
+        </div>
+
+        <div class="instr-step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <h4>Use Trade Setup to get your exact levels</h4>
+            <p>When you are ready to place the trade, upload the chart one more time and run Trade Setup. This gives you a precise entry, stop loss, and two take profit targets. Write these levels down before you open the trade.</p>
+            <span class="step-tip">💡 Always set your stop loss in the platform before entering — don't rely on watching manually</span>
+          </div>
+        </div>
+
+        <div class="instr-step">
+          <div class="step-num">5</div>
+          <div class="step-body">
+            <h4>After the trade closes, run Post-Trade Review</h4>
+            <p>Win or lose, upload the chart after the trade closes and describe what happened. This is how you improve over time — understanding what you did well and what you could do better is more valuable than the profit or loss itself.</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- DISCLAIMER -->
+    <div style="background:rgba(255,107,53,0.06);border:1px solid rgba(255,107,53,0.2);border-radius:10px;padding:18px 20px;margin-top:8px;">
+      <div style="color:var(--accent2);font-size:12px;font-family:'Space Mono',monospace;font-weight:700;margin-bottom:6px;">⚠️ IMPORTANT DISCLAIMER</div>
+      <p style="color:var(--muted);font-size:13px;line-height:1.6;">TradeEdge provides AI-generated technical analysis for educational and informational purposes only. It is not financial advice. All trading involves substantial risk of loss. Past performance and AI analysis do not guarantee future results. Never trade with money you cannot afford to lose. Always do your own research and consult a qualified financial advisor before making trading decisions.</p>
+    </div>
+
+  </div>
+
+</main>
+
+<script>
+// ── PROMPTS ──────────────────────────────────────────────────────────────────
+const PROMPTS = {
+  trend: {
+    label: 'TREND ANALYSIS',
+    icon: '📈',
+    text: `You are an expert technical analyst with 20 years of experience across equities, forex, and crypto markets. I am sharing a chart screenshot with you. Analyse it thoroughly.
+
+Do the following in order:
+
+1. TREND IDENTIFICATION
+   - State the dominant trend: uptrend, downtrend, or range-bound
+   - Identify the trend's approximate start based on the chart
+   - Rate trend strength: Strong / Moderate / Weak
+   - Explain your reasoning in 2–3 sentences
+
+2. KEY LEVELS
+   - List the 3 most significant support zones
+   - List the 3 most significant resistance zones
+   - For each level, note how many times price has respected it
+
+3. STRUCTURAL ANALYSIS
+   - Identify higher highs / higher lows (uptrend) or lower highs / lower lows (downtrend)
+   - Note any structural breaks
+   - Flag any consolidation zones
+
+4. SUMMARY
+   - Write a 3-sentence technical brief as if presenting to a trading desk
+
+Format each section with a clear header. Be specific — reference actual price levels visible in the chart. Do not give generic analysis.`
+  },
+
+  mtf: {
+    label: 'MULTI-TIMEFRAME',
+    icon: '🕰️',
+    text: `You are a professional technical analyst. I am sharing a chart screenshot. Perform a complete multi-timeframe analysis based on what you can see.
+
+Work through this step by step:
+
+1. TIMEFRAME-BY-TIMEFRAME BREAKDOWN
+   For each timeframe visible (or infer short/medium/long term from the chart), state:
+   - The current trend direction and structure
+   - The most important support and resistance level
+   - The most recent significant price event (breakout, rejection, consolidation)
+
+2. CONFLUENCE ANALYSIS
+   - Identify any levels that appear as significant support or resistance across multiple timeframes
+   - State whether the trend direction is aligned or in conflict
+   - If in conflict, explain what that means for trade timing
+
+3. DIRECTIONAL BIAS
+   - Give a single directional bias: Bullish, Bearish, or Neutral
+   - Assign a confidence level: Low / Medium / High
+   - Write 3–4 sentences explaining the reasoning
+
+4. TIMING NOTE
+   - Is this an ideal time to enter, a time to wait, or stay on the sidelines? Explain why.`
+  },
+
+  patterns: {
+    label: 'PATTERN SCANNER',
+    icon: '🔍',
+    text: `You are a technical analyst specializing in chart pattern recognition. I am sharing a chart screenshot. Scan it exhaustively for the following patterns. For every pattern you find, provide a full breakdown. If a pattern is not present, say so explicitly.
+
+PATTERNS TO SCAN FOR:
+- Bull flag or bear flag
+- Ascending, descending, or symmetrical triangle
+- Head and shoulders or inverse head and shoulders
+- Double top or double bottom
+- Wedge (rising or falling)
+- Cup and handle
+- Rounding bottom or top
+- Price channel (parallel support and resistance)
+
+FOR EACH PATTERN FOUND, REPORT:
+- Pattern name
+- Where it appears on the chart
+- Completion status: Forming / Mature / Confirmed
+- The key price level to watch (breakout or breakdown trigger)
+- Implied measured move if the pattern resolves as expected
+- Pattern quality rating: Strong / Moderate / Weak — and the reason
+- What would invalidate this pattern
+
+END WITH:
+A ranked list of the top 2 patterns by quality and clarity, and why they stand out.`
+  },
+
+  setup: {
+    label: 'TRADE SETUP',
+    icon: '🎯',
+    text: `You are a professional trader and risk manager. I am sharing a chart screenshot. Derive a complete, actionable trade setup from what you see. Be precise and conservative. Do not invent setups where the chart doesn't support one.
+
+BUILD THE TRADE SETUP AS FOLLOWS:
+
+1. DIRECTIONAL BIAS
+   - Long or Short — state which and the single most compelling reason
+
+2. ENTRY
+   - Ideal entry price or zone
+   - Entry condition: what needs to happen before entering
+   - Entry type: breakout, pullback, or reversal entry
+
+3. STOP LOSS
+   - Exact stop loss price
+   - Justification: explain why this level — what structure makes it the logical invalidation point
+   - Stop distance in % from entry
+
+4. TAKE PROFIT TARGETS
+   - TP1 (conservative): price, reasoning, % gain from entry
+   - TP2 (full measured move): price, reasoning, % gain from entry
+   - Risk/reward ratio for TP1 and TP2 separately
+
+5. INVALIDATION
+   - The specific price event that would tell you this setup is no longer valid
+   - What you would do if that event occurred
+
+6. COUNTER SCENARIO
+   - What would have to be true for the trade to go the other way?
+   - Is that scenario currently more or less probable?
+
+7. SETUP QUALITY RATING
+   - Rate this setup: A (high conviction), B (solid with caveats), or C (speculative)
+   - Give the primary reason for the rating`
+  },
+
+  watchlist: {
+    label: 'WATCHLIST SCORER',
+    icon: '📋',
+    text: `You are a technical analyst helping me prioritize my trading watchlist. I am sharing a chart screenshot showing multiple assets or one asset I want scored.
+
+For each asset visible (or the single asset shown), do the following:
+
+- Assign a Setup Quality Score from 1 to 5:
+  5 = High-conviction setup, clearly defined levels, strong trend or pattern
+  4 = Good setup, mostly clear, minor ambiguity
+  3 = Neutral — watchable but no strong edge right now
+  2 = Choppy or conflicting signals, low clarity
+  1 = No viable setup, avoid
+
+- Write one sentence explaining the score
+
+After scoring, do the following:
+- Rank the top setups by priority
+- For each top setup, write 2–3 sentences on what makes it worth watching and what price event would make it actionable
+
+Be direct and critical. If nothing is worth trading, say so.`
+  },
+
+  review: {
+    label: 'POST-TRADE REVIEW',
+    icon: '📝',
+    text: `You are a trading coach and performance analyst. I am sharing a chart screenshot of a trade I recently took. Give me an honest, detailed post-trade review. Do not be encouraging for its own sake — be accurate and direct.
+
+Please review the following based on what you can see in the chart and the context I provide:
+
+1. THESIS QUALITY
+   - Was the original thesis technically sound?
+   - What was correct about the analysis?
+   - What was flawed or missing?
+
+2. ENTRY EVALUATION
+   - Was the entry timing optimal given the thesis?
+   - Were there better entry points that would have offered better risk/reward?
+
+3. STOP PLACEMENT
+   - Was the stop logical and structure-based?
+   - Too tight or too wide?
+
+4. EXIT EVALUATION
+   - Was the exit the right call?
+   - Was there a better exit point visible in hindsight?
+
+5. PROCESS SCORE
+   Rate each from 1–5 (5 = excellent):
+   - Analysis quality:
+   - Entry discipline:
+   - Risk management:
+   - Exit execution:
+   - Overall process:
+
+6. KEY LESSON
+   - The single most important thing to take from this trade in one sentence.
+   - One concrete rule to apply going forward.`
+  }
+};
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let selectedType   = 'trend';
+let imageBase64    = null;
+let imageMediaType = 'image/png';
+let analysisHistory = JSON.parse(localStorage.getItem('tradeedge_history') || '[]');
+
+// ── PROMPT SELECTION ─────────────────────────────────────────────────────────
+function selectPrompt(el) {
+  document.querySelectorAll('.prompt-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedType = el.dataset.type;
+}
+
+// ── IMAGE HANDLING ────────────────────────────────────────────────────────────
+function triggerUpload() {
+  if (imageBase64) return; // already has image — don't re-trigger
+  document.getElementById('file-input').click();
+}
+
+function handleFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  processImageFile(file);
+}
+
+function processImageFile(file) {
+  imageMediaType = file.type || 'image/png';
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    imageBase64 = ev.target.result.split(',')[1];
+    const preview = document.getElementById('preview-img');
+    preview.src = ev.target.result;
+    preview.style.display = 'block';
+    document.getElementById('upload-placeholder').style.display = 'none';
+    document.getElementById('upload-zone').classList.add('has-image');
+    document.getElementById('change-btn').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearImage(e) {
+  e.stopPropagation();
+  imageBase64 = null;
+  document.getElementById('preview-img').style.display = 'none';
+  document.getElementById('preview-img').src = '';
+  document.getElementById('upload-placeholder').style.display = 'block';
+  document.getElementById('upload-zone').classList.remove('has-image');
+  document.getElementById('change-btn').style.display = 'none';
+  document.getElementById('file-input').value = '';
+}
+
+// Drag and drop
+const zone = document.getElementById('upload-zone');
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+zone.addEventListener('drop', e => {
+  e.preventDefault();
+  zone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) processImageFile(file);
+});
+
+// Paste from clipboard
+document.addEventListener('paste', e => {
+  const items = e.clipboardData.items;
+  for (const item of items) {
+    if (item.type.startsWith('image/')) {
+      processImageFile(item.getAsFile());
+      break;
+    }
+  }
+});
+
+// ── ANALYSIS ─────────────────────────────────────────────────────────────────
+async function runAnalysis() {
+  const errorBox = document.getElementById('error-box');
+  errorBox.className = 'error-box';
+
+  if (!imageBase64) {
+    errorBox.className = 'error-box visible';
+    errorBox.textContent = 'Please upload a chart screenshot first.';
+    return;
+  }
+
+  const context   = document.getElementById('context-input').value.trim();
+  const prompt    = PROMPTS[selectedType];
+  const fullPrompt = context
+    ? prompt.text + '\n\n--- ADDITIONAL CONTEXT FROM TRADER ---\n' + context
+    : prompt.text;
+
+  // Show loading
+  document.getElementById('analyse-btn').disabled = true;
+  document.getElementById('loading-wrap').className = 'loading-wrap visible';
+  document.getElementById('result-panel').className = 'result-panel';
+  document.getElementById('loading-label').textContent = 'Analysing chart...';
+
+  const loadingMessages = [
+    'Identifying trend structure...',
+    'Scanning key levels...',
+    'Building analysis...',
+    'Almost done...'
+  ];
+  let msgIdx = 0;
+  const msgInterval = setInterval(() => {
+    msgIdx = (msgIdx + 1) % loadingMessages.length;
+    document.getElementById('loading-label').textContent = loadingMessages[msgIdx];
+  }, 2500);
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1500,
+        messages: [{
+          role: 'user',
+          content: [
+            {
+              type: 'image',
+              source: {
+                type: 'base64',
+                media_type: imageMediaType,
+                data: imageBase64
+              }
+            },
+            {
+              type: 'text',
+              text: fullPrompt
+            }
+          ]
+        }]
+      })
+    });
+
+    const data = await response.json();
+    clearInterval(msgInterval);
+
+    if (!response.ok) {
+      throw new Error(data.error?.message || 'API error ' + response.status);
+    }
+
+    const rawText = data.content[0].text;
+    displayResult(rawText, prompt);
+    saveToHistory(rawText, prompt, context);
+
+  } catch (err) {
+    clearInterval(msgInterval);
+    errorBox.className = 'error-box visible';
+    errorBox.textContent = 'Error: ' + err.message;
+  } finally {
+    document.getElementById('loading-wrap').className = 'loading-wrap';
+    document.getElementById('analyse-btn').disabled = false;
+  }
+}
+
+// ── DISPLAY RESULT ────────────────────────────────────────────────────────────
+function displayResult(text, prompt) {
+  // Convert markdown-ish text to HTML
+  let html = text
+    // Headers like "1. TREND IDENTIFICATION" or "## TREND"
+    .replace(/^#{1,3}\s+(.+)$/gm, '<h2>$1</h2>')
+    .replace(/^\d+\.\s+([A-Z][A-Z\s\/]+)$/gm, '<h2>$1</h2>')
+    .replace(/^([A-Z][A-Z\s\/&]{4,})$/gm, '<h2>$1</h2>')
+    // Sub-headers
+    .replace(/^\*\*(.+)\*\*$/gm, '<h3>$1</h3>')
+    // Bold
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    // Italic — use for price levels/numbers
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    // Bullet points
+    .replace(/^[-•]\s+(.+)$/gm, '<li>$1</li>')
+    // Wrap consecutive <li> in <ul>
+    .replace(/(<li>.*<\/li>\n?)+/g, match => '<ul>' + match + '</ul>')
+    // Line breaks
+    .replace(/\n\n/g, '</p><p>')
+    .replace(/\n/g, '<br>');
+
+  html = '<p>' + html + '</p>';
+
+  document.getElementById('result-content').innerHTML = html;
+  document.getElementById('result-badge').textContent = prompt.label;
+  document.getElementById('result-time').textContent = new Date().toLocaleTimeString();
+  document.getElementById('result-panel').className = 'result-panel visible';
+
+  // Scroll to result
+  document.getElementById('result-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ── HISTORY ───────────────────────────────────────────────────────────────────
+function saveToHistory(text, prompt, context) {
+  const entry = {
+    id:      Date.now(),
+    type:    prompt.label,
+    icon:    prompt.icon,
+    context: context || 'No context provided',
+    text:    text,
+    time:    new Date().toLocaleString()
+  };
+  analysisHistory.unshift(entry);
+  if (analysisHistory.length > 10) analysisHistory = analysisHistory.slice(0, 10);
+  localStorage.setItem('tradeedge_history', JSON.stringify(analysisHistory));
+  renderHistory();
+}
+
+function renderHistory() {
+  if (!analysisHistory.length) return;
+  document.getElementById('history-section').style.display = 'block';
+  document.getElementById('history-list').innerHTML = analysisHistory.map(entry => `
+    <div class="history-item" onclick="loadHistory('${entry.id}')">
+      <div class="history-item-icon">${entry.icon}</div>
+      <div class="history-item-info">
+        <h4>${entry.type}</h4>
+        <p>${entry.context.slice(0, 60)}${entry.context.length > 60 ? '...' : ''}</p>
+      </div>
+      <div class="history-item-time">${entry.time}</div>
+    </div>
+  `).join('');
+}
+
+function loadHistory(id) {
+  const entry = analysisHistory.find(e => e.id == id);
+  if (!entry) return;
+  displayResult(entry.text, { label: entry.type, icon: entry.icon });
+}
+
+// ── UTILITY ───────────────────────────────────────────────────────────────────
+function copyResult() {
+  const text = document.getElementById('result-content').innerText;
+  navigator.clipboard.writeText(text).then(() => alert('Analysis copied to clipboard!'));
+}
+
+function clearAll() {
+  clearImage({ stopPropagation: () => {} });
+  document.getElementById('context-input').value = '';
+  document.getElementById('result-panel').className = 'result-panel';
+  document.getElementById('error-box').className = 'error-box';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Init
+renderHistory();
+</script>
+</body>
+</html>
